@@ -1,0 +1,137 @@
+#!/bin/env bash
+
+# Please adapt for your environment 
+dns=local # like fritz.box
+storage=vm_pool # default is local-lvm
+images_dir=/var/lib/vz/images # default pve dir
+
+# Color Codes
+NORMAL="\e[39m"
+BLUE="\e[34m"
+GREEN="\e[32m"
+RED="\e[31m"
+
+# Create VM Id
+old_vm_id=$( cut -d ":" -f 1 /etc/pve/.vmlist | grep "[0-9]" | tr -d '"' | sort -nr | head -n 1)
+vm_id=$(( "$old_vm_id" + 1 ))
+
+# Change to Image dir
+cd "$images_dir" || { echo -e "$RED Can not enter $images_dir $NORMAL\n"; exit 2; }
+
+# Download if ther is an parameter
+if [ -z "$1" ];
+then
+    echo -e "$BLUE No parameters found search for local files. $NORMAL"
+else
+    download_name=$(echo "$1" | rev | cut -d '/' -f 1 | rev)
+
+    if echo "$download_name" | grep -q ".rar\|.zip\|.ova\|.7z";
+    then
+        wget "$1" -O "$download_name" 
+    else
+        echo -e "$RED No .zip, .7z, .rar or .ova File. $NORMAL\n"; 
+        exit 2;
+    fi
+fi
+
+# Search for file patterns.
+echo -e "$BLUE Try to extract files. $NORMAL\n"
+
+file=$(find "$images_dir"/ -name '*.zip' | head -n 1)
+if [ -n "$file" ];
+then
+    unzip &> /dev/null || apt install -y unzip;
+    unzip "$file" && echo -e "$GREEN Zip Files extract $NORMAL\n" && rm "$file"
+else
+    echo -e "$BLUE No .zip File found. $NORMAL"
+fi
+
+file=$(find "$images_dir"/ -name '*.7z' | head -n 1)
+if [ -n "$file" ];
+then
+    p7zip -h &> /dev/null || apt install -y p7zip;
+    p7zip -d "$file" && echo -e "$GREEN Zip Files extract $NORMAL\n" && rm "$file"
+else
+    echo -e "$BLUE No .7z  File found. $NORMAL"
+fi
+
+file=$(find "$images_dir"/ -name '*.rar' | head -n 1)
+if [ -n "$file" ];
+then
+    7z &> /dev/null || apt install -y p7zip-full;
+    7z x "$file" && echo -e "$GREEN rar Files extract $NORMAL\n" && rm "$file"
+else
+    echo -e "$BLUE No .rar File found. $NORMAL"
+fi
+
+file=$(find "$images_dir"/ -name '*.ova' | head -n 1)
+if [ -n "$file" ];
+then
+    echo -e "$BLUE Try to convert $file to vmk file. $NORMAL\n"
+    tar -xvf "$file" && echo -e "$GREEN Converting done! (ova2vmk) $NORMAL\n" && rm "$file"
+else
+    echo -e "$BLUE No .ova File found. $NORMAL"
+fi
+
+file=$(find "$images_dir"/ -name '*.vmdk' | head -n 1)
+if [ -n "$file" ];
+then
+    echo -e "$BLUE Try to convert $file to qcow file. $NORMAL\n"
+    qcow_name="$(echo "$file" | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1).qcow2"
+    qemu-img convert "$file" "$qcow_name" -O qcow2 && echo -e "$GREEN Converting done! (vmdk2qcow) $NORMAL\n"
+else
+    echo -e "$BLUE No .vmdk File found. $NORMAL"
+fi
+
+# Create directory if the qcow file exists
+echo -e "$BLUE Tyr to Copy qcow File $NORMAL\n"
+if [ -f "$qcow_name" ];
+then
+    mkdir "$vm_id"
+else
+    echo -e "$RED Cannot create new directory. (/$vm_id). $NORMAL\n" 
+fi
+
+# Copy qcow File in VM directory
+cp ./*.qcow2 "$vm_id/" || echo -e "$RED Can not copy qcow file to Directory. $NORMAL\n";
+
+# Remove old files
+echo -e "$BLUE Removing old files. $NORMAL\n"
+rm ./*.mf
+rm ./*.ovf
+rm ./*.qcow2
+echo -e "$GREEN Removing done! $NORMAL\n"
+
+# Create VM
+echo -e "$BLUE Create VM. $NORMAL\n"
+name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | cut -d "-" -f 1 | tr '[:upper:]' '[:lower:]'| tr -d '_')
+qm create "$vm_id" \
+--net0 e1000,bridge=vmbr0 \
+--acpi yes \
+--cores 2 \
+--keyboard de \
+--memory 1024 \
+--name "$name" \
+--nameserver "$dns" \
+--ostype l26 \
+--socket 1 \
+--onboot yes \
+--kvm yes || { echo -e "$RED Fail to create VM $NORMAL\n"; exit 2; }
+echo -e "$GREEN VM created."
+
+# Import Disk
+echo -e "$BLUE Try to import Disk $NORMAL\n"
+source=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1)
+qm importdisk "$vm_id" "$source" "$storage" -format qcow2 || { echo -e "$RED Convert Disk faild. $NORMAL\n"; exit 2; }
+echo -e "$GREEN Disk import Successfully."
+
+# Set config file
+vm_config=/etc/pve/qemu-server/"$vm_id".conf
+
+# Edit config file 
+echo -e "$BLUE Edit Config from VM ($vm_config). $NORMAL\n"
+sed -i '1s/^/bios: seabios \nbootdisk: ide0 \n/' "$vm_config"
+sed -i '/boot:/d' "$vm_config"
+sed -i 's/unused/ide/g' "$vm_config"
+
+echo -e "$GREEN $0 done $NORMAL\n"
