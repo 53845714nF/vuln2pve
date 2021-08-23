@@ -2,6 +2,8 @@
 
 <img src="img/vunl2pve.png" width="552" height="291">
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/53845714nF/vuln2pve/Shellcheck%20on%20vuln2pve?label=Shellcheck)
+
 English version below
 
 ### Berschreibung
