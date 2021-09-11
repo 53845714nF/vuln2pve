@@ -19,7 +19,7 @@ Das vuln2pve Skript auf den Proxmox VE Host ablegen. Am besten im `/opt` oder `/
 
 ##### Ausführungsrechte vergeben:
 ```bash
-chmod +x vuln2pve
+chmod u+x vuln2pve
 
 ```
 
@@ -60,7 +60,7 @@ Copy the vuln2pve file to your Proxmox VE Host the best in the `/opt` or `/usr/l
 
 ##### Set execution rights:
 ```bash
-chmod +x vuln2pve
+chmod u+x vuln2pve
 
 ```
 
