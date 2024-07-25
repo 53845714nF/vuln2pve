@@ -4,6 +4,7 @@
 dns=local # like fritz.box
 storage=vm_pool # default is local-lvm
 images_dir=/var/lib/vz/images # default pve dir
+bridge=vmbr0 # set your bridge default is vmbr0
 
 # Color Codes
 NORMAL="\e[39m"
@@ -106,7 +107,7 @@ echo -e "$GREEN Removing done! $NORMAL\n"
 echo -e "$BLUE Create VM. $NORMAL\n"
 name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | cut -d "-" -f 1 | tr '[:upper:]' '[:lower:]'| tr -d '_')
 qm create "$vm_id" \
---net0 e1000,bridge=vmbr0 \
+--net0 e1000,bridge="$bridge" \
 --acpi yes \
 --cores 2 \
 --keyboard de \
