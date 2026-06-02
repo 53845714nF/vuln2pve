@@ -156,7 +156,7 @@ echo -e "${BLUE} Try to import Disk ${NORMAL}\n"
 disk_path=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1)
 qm importdisk "$vm_id" "$disk_path" "$storage" || { echo -e "${RED} Disk import failed. ${NORMAL}\n"; exit 2; }
 echo -e "${GREEN} Disk imported Successfully."
-rm -rf "$images_dir/$vm_id"
+rm -rf "${images_dir:?}/${vm_id:?}"
 
 # Set config file
 vm_config=/etc/pve/qemu-server/"$vm_id".conf
