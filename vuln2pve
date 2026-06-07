@@ -193,7 +193,7 @@ echo -e "${GREEN} Removing done! ${NORMAL}\n"
 
 # Create VM
 echo -e "${BLUE} Create VM. ${NORMAL}\n"
-name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | sed 's/-disk-\?[0-9]*$//' | tr '[:upper:]' '[:lower:]' | tr '_' '-')
 qm create "$vm_id" \
 --net0 e1000,bridge="$bridge" \
 --acpi yes \
