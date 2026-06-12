@@ -19,6 +19,7 @@ max_vm_id=0                     # Maximum VM ID (exclusive), default is 0 (no li
 #     bridge="vmbr1"
 config_dir="${XDG_CONFIG_HOME:-$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/.config}"
 config_file="$config_dir/vuln2pve/vuln2pve.conf"
+# shellcheck source=/dev/null
 [ -f "$config_file" ] && source "$config_file"
 
 # Color Codes
