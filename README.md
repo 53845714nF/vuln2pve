@@ -4,60 +4,13 @@
 
 [![Shellcheck on vuln2pve](https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml/badge.svg)](https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml)
 
-English version below
-
-## Berschreibung
-
-vuln2pve ist ein kleines Shell Skript, was es erlaubt VMs von Vulnhub zu downloaden
-und diese dann automatisiert auf Proxmox VE zu erstellen.
-Es soll manuellen Arbeitsaufwand verringern. Daraus folgt, dass mit CTFs schneller begonnen werden kann. 😉
-
-Ein ähnliches Projekt gibt es unter: [ProxKube](https://github.com/Ap3x/ProxKube) \
-Dieses bietet zwar mehr Möglichkeiten, braucht aber dafür mehr Nutzerinteraktion.
-
-## Installation von vuln2pve
-
-Das vuln2pve Skript auf den Proxmox VE Host ablegen. Am besten im `/opt` oder `/usr/local/bin` Verzeichnis.
-
-```bash
-wget https://raw.githubusercontent.com/53845714nF/vuln2pve/main/vuln2pve -O /opt/vuln2pve && chmod u+x /opt/vuln2pve
-```
-
-## Verwendung
-
-### Einstellungen für deine Umgebung
-
-```bash
-# Please adapt for your environment 
-dns=local # like fritz.box
-storage=vm_pool # default is local-lvm
-images_dir=/var/lib/vz/images # default pve dir
-```
-
-### Download VM und konvertiert es zur Proxmox VM
-
-```bash
-./vuln2pve <url>
-```
-
-### Sucht im images Verzeichnis nach `.zip`, `.ova`, `.rar` oder `.vmdk` Dateien und konvertiert diese zur Proxmox VM
-
-```bash
-./vuln2pve
-```
-
-> [!WARNING]
-> Die Dateien werden dabei gelöscht.
-
----
-
 ## Description
 
 vuln2pve is a small Shell Script that downloads VM's from Vulnhub and converts them to the Proxmox VE format.
 Helpful to avoid manual steps so you can start quickly with your CTF's. 😉
 
-There is a similar project at: [ProxKube](https://github.com/Ap3x/ProxKube) \
-This offers more features but requires more user interaction.
+There was a similar project at: [ProxKube](https://github.com/Ap3x/ProxKube) \
+Unfortunately, this is no longer maintained.
 
 ## Installation of vuln2pve
 
@@ -93,7 +46,7 @@ The following variables are supported:
 
 Example config:
 
-```bash
+```toml
 dns=1.1.1.1
 bridge=vmbr1
 memory=2048
@@ -124,7 +77,9 @@ All config values can also be overridden at runtime via flags, which take preced
 ./vuln2pve <url>
 ```
 
-### Searches the images directory (`images_dir`) for `.zip`, `.7z`, `.ova`, `.rar`, `.vdi` or `.vmdk` files and converts them to Proxmox VE format:
+### Archive convert
+
+Searches the images directory (`images_dir`) for `.zip`, `.7z`, `.ova`, `.rar`, `.vdi` or `.vmdk` files and converts them to Proxmox VE format:
 
 ```bash
 ./vuln2pve
