@@ -1,6 +1,8 @@
 # Lint the script with shellcheck
 
 name: Shellcheck on vuln2pve
+permissions:
+  contents: read
 
 on:
   push:
