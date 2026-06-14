@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 
-# Please adapt for your environment
-dns=local                       # like fritz.box
-storage=local-lvm               # default is local-lvm
-images_dir=/var/lib/vz/images   # default pve dir
-bridge=vmbr0                    # set your bridge default is vmbr0
-keyboard=en-us                  # Default keyboard layout
-cores=2                         # Number of CPU cores for the VM
-memory=1024                     # Memory in MB for the VM
+# Defaults
+dns=local                       # DNS server for the VM, default is local (Proxmox host).
+storage=local-lvm               # Storage location for the VM disk, default is local-lvm.
+images_dir=/var/lib/vz/images   # Images directory, default is /var/lib/vz/images.
+bridge=vmbr0                    # Bridge for network, default is vmbr0.
+cores=2                         # Number of CPU cores for the VM, default is 2.
+memory=1024                     # Memory in MB for the VM, default is 1024 (1GB).
+keyboard=de                     # Keyboard layout, default is German (de). This can be changed to
+                                # your preferred layout (e.g., en-us for US English).
+min_vm_id=100                   # Minimum VM ID (inclusive), default is 100.
+max_vm_id=0                     # Maximum VM ID (exclusive), default is 0 (no limit).
+
+# Load config file if it exists, allowing users to override defaults without modifying the script.
+# Resolves to the invoking user's home when run via sudo, falling back to /root when run directly
+# as root. The config file can contain variable assignments to override the defaults above, e.g.:
+#     images_dir="/path/to/your/images"
+#     bridge="vmbr1"
+config_dir="${XDG_CONFIG_HOME:-$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/.config}"
+config_file="$config_dir/vuln2pve/vuln2pve.conf"
+# shellcheck source=/dev/null
+[ -f "$config_file" ] && source "$config_file"
 
 # Color Codes
 NORMAL="\e[39m"
@@ -15,30 +28,75 @@ BLUE="\e[34m"
 GREEN="\e[32m"
 RED="\e[31m"
 
+# Function to generate a qcow2 filename based on the original filename, replacing underscores with hyphens and removing spaces.
 get_qcow_name() {
     echo "$(basename "$1" | cut -d "." -f 1 | sed -e 's/_/-/g' -e 's/ //g').qcow2"
 }
+
+# Function to display usage information
+usage() {
+    echo "Usage: $(basename "$0") [OPTIONS] [URL]"
+    echo ""
+    echo "  -b, --bridge      Network bridge (default: $bridge)"
+    echo "  -c, --cores       CPU cores (default: $cores)"
+    echo "  -d, --dns         DNS nameserver (default: $dns)"
+    echo "  -i, --images-dir  Images directory (default: $images_dir)"
+    echo "  -k, --keyboard    Keyboard layout (default: $keyboard)"
+    echo "  -m, --memory      Memory in MB (default: $memory)"
+    echo "  -s, --storage     VM disk storage (default: $storage)"
+    echo "      --min-id      Minimum VM ID, inclusive (default: $min_vm_id)"
+    echo "      --max-id      Maximum VM ID, exclusive, 0 = no limit (default: $max_vm_id)"
+    echo "  -h, --help        Show this help"
+}
+
+# Parse command-line arguments
+url=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -b|--bridge)      bridge="$2";     shift 2 ;;
+        -c|--cores)       cores="$2";      shift 2 ;;
+        -d|--dns)         dns="$2";        shift 2 ;;
+        -i|--images-dir)  images_dir="$2"; shift 2 ;;
+        -k|--keyboard)    keyboard="$2";   shift 2 ;;
+        -m|--memory)      memory="$2";     shift 2 ;;
+        -s|--storage)     storage="$2";    shift 2 ;;
+        --min-id)         min_vm_id="$2"; shift 2 ;;
+        --max-id)         max_vm_id="$2"; shift 2 ;;
+        -h|--help)        usage; exit 0 ;;
+        -*)               echo -e "${RED}Unknown option: $1${NORMAL}"; usage; exit 2 ;;
+        *)                url="$1"; shift ;;
+    esac
+done
+
+# Validate VM ID range
+if (( max_vm_id != 0 && max_vm_id <= min_vm_id )); then
+    echo -e "${RED}--max-id ($max_vm_id) must be greater than --min-id ($min_vm_id).${NORMAL}\n"; exit 2
+fi
 
 # Root check
 [[ $EUID -ne 0 ]] && { echo -e "${RED}This script must be run as root.${NORMAL}"; exit 2; }
 
 # Create VM Id
 old_vm_id=$( cut -d ":" -f 1 /etc/pve/.vmlist | grep "[0-9]" | tr -d '"' | sort -nr | head -n 1)
-vm_id=$(( ${old_vm_id:-99} + 1 ))
+vm_id=$(( ${old_vm_id:-0} + 1 ))
+(( vm_id < min_vm_id )) && vm_id=$min_vm_id
+if (( max_vm_id > 0 && vm_id >= max_vm_id )); then
+    echo -e "${RED}No available VM ID in range [$min_vm_id, $max_vm_id).${NORMAL}\n"; exit 2
+fi
 
 # Change to Image dir
 cd "$images_dir" || { echo -e "${RED} Can not enter $images_dir ${NORMAL}\n"; exit 2; }
 
-# Download if there is a parameter
-if [ -z "$1" ];
+# Download if a URL was provided
+if [ -z "$url" ];
 then
-    echo -e "${BLUE} No parameters found search for local files. ${NORMAL}"
+    echo -e "${BLUE} No URL provided, searching for local files. ${NORMAL}"
 else
-    download_name=$(basename "$1")
+    download_name=$(basename "$url")
 
     if echo "$download_name" | grep -qE "\.(rar|zip|ova|7z)$";
     then
-        wget "$1" -O "$download_name" || { echo -e "${RED}Download failed: $1${NORMAL}\n"; exit 2; }
+        wget "$url" -O "$download_name" || { echo -e "${RED}Download failed: $url${NORMAL}\n"; exit 2; }
     else
         echo -e "${RED} No .zip, .7z, .rar or .ova File. ${NORMAL}\n";
         exit 2;
@@ -136,7 +194,7 @@ echo -e "${GREEN} Removing done! ${NORMAL}\n"
 
 # Create VM
 echo -e "${BLUE} Create VM. ${NORMAL}\n"
-name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+name=$(find "$images_dir"/"$vm_id"/ -name '*.qcow2' | head -n 1 | rev | cut -d "/" -f 1 | rev | cut -d "." -f 1 | sed 's/-disk-\?[0-9]*$//' | tr '[:upper:]' '[:lower:]' | tr '_' '-')
 qm create "$vm_id" \
 --net0 e1000,bridge="$bridge" \
 --acpi yes \
