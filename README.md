@@ -1,18 +1,21 @@
-# vuln2pve
+<h1 align="center" > vuln2pve </h1>
 
-<img src="img/vunl2pve.png" alt="Logo of vunl2pve" width="552" height="291">
+<p align="center" style="padding: 5pt;">
+    <img alt="Static Badge" src="https://img.shields.io/badge/License-GPL3.0-green" alt="License">
+    <a href="https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml">
+    <img src="https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml/badge.svg" alt="Linting with Shellcheck" style="margin-left: 0.2em;">
+</a>
 
-[![Shellcheck on vuln2pve](https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml/badge.svg)](https://github.com/53845714nF/vuln2pve/actions/workflows/lint_vuln2pve.yml)
+ <p align="center">
+   vuln2pve is a small Shell Script that downloads VM's from <a href="https://www.vulnhub.com/">Vulnhub</a> and converts them to the Proxmox VE format.
+   Helpful to avoid manual steps so you can start quickly with your CTF's. 😉
+</p>
 
-## Description
+<div align="center">
+  <img  src="img/vunl2pve.png" alt="Logo of vunl2pve" width="552" height="291">
+</div>
 
-vuln2pve is a small Shell Script that downloads VM's from [Vulnhub](https://www.vulnhub.com/) and converts them to the Proxmox VE format.
-Helpful to avoid manual steps so you can start quickly with your CTF's. 😉
-
-There was a similar project at: [ProxKube](https://github.com/Ap3x/ProxKube) \
-Unfortunately, this is no longer maintained.
-
-## Installation of vuln2pve
+## ⚙️ Setup
 
 Copy the vuln2pve file to your Proxmox VE Host. Recommended location is either the `/opt` or `/usr/local/bin` directory.
 
@@ -20,7 +23,7 @@ Copy the vuln2pve file to your Proxmox VE Host. Recommended location is either t
 wget https://raw.githubusercontent.com/53845714nF/vuln2pve/main/vuln2pve -O /opt/vuln2pve && chmod u+x /opt/vuln2pve
 ```
 
-## Usage
+## ⚡ Usage
 
 ### Demo
 
@@ -91,3 +94,7 @@ Searches the images directory (`images_dir`) for `.zip`, `.7z`, `.ova`, `.rar`, 
 
 > [!WARNING]
 > The files will be deleted.
+
+## 💡 Hint
+There was a similar project at: [ProxKube](https://github.com/Ap3x/ProxKube) \
+Unfortunately, this is no longer maintained.
